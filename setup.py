@@ -18,7 +18,8 @@
 
 "igor: interface for reading binary IGOR files."
 
-from distutils.core import setup
+# from distutils.core import setup
+from setuptools import setup
 import os.path
 
 from igor import __version__
