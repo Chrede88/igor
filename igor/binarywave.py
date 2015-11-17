@@ -648,7 +648,7 @@ def xypairs(bw):
         May only work for version 5 waves """
 
     y = bw['wave']['wData']
-    x = np.zeros(y.shape)
+    x = _numpy.zeros(y.shape)
     dimensions = bw['wave']['wave_header']['nDim']
     if bw['version']==5:
         sfA = bw['wave']['wave_header']['sfA']
@@ -658,14 +658,14 @@ def xypairs(bw):
         sfB = bw['wave']['wave_header']['hsB']
     else:
         raise ValueError('Something is up with your binary wave version number.')
-    for d in range(np.count_nonzero(dimensions)):
+    for d in range(_numpy.count_nonzero(dimensions)):
         if d == 0:
             try:
-                x = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+                x = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
             except ValueError: # more than 1d
-                x[d] = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+                x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
         else:
-            x[d] = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+            x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
     return x, y
 def save(filename):
     raise NotImplementedError
