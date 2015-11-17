@@ -1,0 +1,6 @@
+AUTHORS
+MANIFEST
+build/
+dist/
+igor.egg-info/
+*.pyc
