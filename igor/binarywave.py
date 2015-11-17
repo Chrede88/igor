@@ -637,7 +637,35 @@ def load(filename):
             f.close()
 
     return data
+    
+def xypairs(bw):
+    """ Accepts binary wave dictionary and outputs arrays with x and y values.
+    
+        Input -- binary wave dictionary
+        Output -- x = numpy array with x data from binary wave
+                  y = numpy array with y data from binary wave 
+                  
+        May only work for version 5 waves """
 
-
+    y = bw['wave']['wData']
+    x = np.zeros(y.shape)
+    dimensions = bw['wave']['wave_header']['nDim']
+    if bw['version']==5:
+        sfA = bw['wave']['wave_header']['sfA']
+        sfB = bw['wave']['wave_header']['sfB']
+    elif bw['version']==2:
+        sfA = bw['wave']['wave_header']['hsA']
+        sfB = bw['wave']['wave_header']['hsB']
+    else:
+        raise ValueError('Something is up with your binary wave version number.')
+    for d in range(np.count_nonzero(dimensions)):
+        if d == 0:
+            try:
+                x = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+            except ValueError: # more than 1d
+                x[d] = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+        else:
+            x[d] = sfA[d]*np.arange(dimensions[d]) + sfB[d]
+    return x, y
 def save(filename):
     raise NotImplementedError
