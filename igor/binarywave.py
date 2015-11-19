@@ -32,6 +32,7 @@ import sys as _sys
 import types as _types
 
 import numpy as _numpy
+import pandas as _pandas
 
 from . import LOG as _LOG
 from .struct import Structure as _Structure
@@ -667,5 +668,12 @@ def xypairs(bw):
         else:
             x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
     return x, y
+    
+def wave_as_dataframe(bw):
+    """ accepts binary wave dictionary and outputs a pandas data frame with
+        the x,y coordinates as individual columns """
+    x, y = xypairs(bw)
+    return _pandas.DataFrame.from_items([('x', x), ('y', y)], orient = 'columns')
+    
 def save(filename):
     raise NotImplementedError
