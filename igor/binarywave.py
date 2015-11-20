@@ -636,44 +636,47 @@ def load(filename):
     finally:
         if not hasattr(filename, 'read'):
             f.close()
-
     return data
-    
-def xypairs(bw):
-    """ Accepts binary wave dictionary and outputs arrays with x and y values.
-    
-        Input -- binary wave dictionary
-        Output -- x = numpy array with x data from binary wave
-                  y = numpy array with y data from binary wave 
-                  
-        May only work for version 5 waves """
-
-    y = bw['wave']['wData']
-    x = _numpy.zeros(y.shape)
-    dimensions = bw['wave']['wave_header']['nDim']
-    if bw['version']==5:
-        sfA = bw['wave']['wave_header']['sfA']
-        sfB = bw['wave']['wave_header']['sfB']
-    elif bw['version']==2:
-        sfA = bw['wave']['wave_header']['hsA']
-        sfB = bw['wave']['wave_header']['hsB']
-    else:
-        raise ValueError('Something is up with your binary wave version number.')
-    for d in range(_numpy.count_nonzero(dimensions)):
-        if d == 0:
-            try:
-                x = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
-            except ValueError: # more than 1d
-                x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
-        else:
-            x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
-    return x, y
-    
-def wave_as_dataframe(bw):
-    """ accepts binary wave dictionary and outputs a pandas data frame with
-        the x,y coordinates as individual columns """
-    x, y = xypairs(bw)
-    return _pandas.DataFrame.from_items([('x', x), ('y', y)], orient = 'columns')
     
 def save(filename):
     raise NotImplementedError
+    
+#### wave class to add some functionality ### 
+    
+class Waves:
+    """ a class for handling waves as python objects """
+    
+    def __init__(self, filename)
+        self.wave = load(filename) # load wave into dictionary
+    
+        self.y = wave['wave']['wData'] # get y data
+        
+        # create x data
+        self.x = _numpy.zeros(self.y.shape) 
+        dimensions = wave['wave']['wave_header']['nDim']
+        if wave['version']==5:
+            sfA = wave['wave']['wave_header']['sfA']
+            sfB = wave['wave']['wave_header']['sfB']
+        elif wave['version']==2:
+            sfA = wave['wave']['wave_header']['hsA']
+            sfB = wave['wave']['wave_header']['hsB']
+        else:
+            raise ValueError('Something is up with your binary wave version number.')
+        for d in range(_numpy.count_nonzero(dimensions)):
+            if d == 0:
+                try:
+                    self.x = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
+                except ValueError: # more than 1d
+                    self.x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
+            else:
+                self.x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
+    
+    def as_nparray(self):
+    """ Get x,y coordinates as numpy array 
+        *This fails if the data is not 1D*"""
+        return np.array(zip(x, y))
+
+    def as_dataframe(self):
+    """ Get x,y coordinates as individual columns in a dataframe 
+        *This fails if the data is not 1D* """
+        return _pandas.DataFrame.from_items([('x', self.x), ('y', self.y)], orient = 'columns')
