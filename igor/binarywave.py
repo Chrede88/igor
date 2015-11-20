@@ -646,20 +646,20 @@ def save(filename):
 class Waves:
     """ a class for handling waves as python objects """
     
-    def __init__(self, filename)
+    def __init__(self, filename):
         self.wave = load(filename) # load wave into dictionary
     
-        self.y = wave['wave']['wData'] # get y data
+        self.y = self.wave['wave']['wData'] # get y data
         
         # create x data
-        self.x = _numpy.zeros(self.y.shape) 
-        dimensions = wave['wave']['wave_header']['nDim']
-        if wave['version']==5:
-            sfA = wave['wave']['wave_header']['sfA']
-            sfB = wave['wave']['wave_header']['sfB']
-        elif wave['version']==2:
-            sfA = wave['wave']['wave_header']['hsA']
-            sfB = wave['wave']['wave_header']['hsB']
+        self.x = _numpy.zeros(self.y.shape)
+        dimensions = self.wave['wave']['wave_header']['nDim']
+        if self.wave['version']==5:
+            sfA = self.wave['wave']['wave_header']['sfA']
+            sfB = self.wave['wave']['wave_header']['sfB']
+        elif self.wave['version']==2:
+            sfA = self.wave['wave']['wave_header']['hsA']
+            sfB = self.wave['wave']['wave_header']['hsB']
         else:
             raise ValueError('Something is up with your binary wave version number.')
         for d in range(_numpy.count_nonzero(dimensions)):
@@ -671,12 +671,24 @@ class Waves:
             else:
                 self.x[d] = sfA[d]*_numpy.arange(dimensions[d]) + sfB[d]
     
+    def scale_y(self, scaling):
+        """ Scale y data. Uses an original copy of y data each time.
+        
+            Input -- scaling factor
+            
+            self.y = self.y*scaling """
+            
+        self.y = self.wave['wave']['wData'] # get y data
+        self.y = self.y*scaling
+    
     def as_nparray(self):
-    """ Get x,y coordinates as numpy array 
-        *This fails if the data is not 1D*"""
-        return np.array(zip(x, y))
+        """ Get x,y coordinates as numpy array.
+    
+            This fails if the data is not 1D """
+        return _numpy.array(zip(self.x, self.y))
 
     def as_dataframe(self):
-    """ Get x,y coordinates as individual columns in a dataframe 
-        *This fails if the data is not 1D* """
+        """ Get x,y coordinates as individual columns in a dataframe.
+    
+            This fails if the data is not 1D """
         return _pandas.DataFrame.from_items([('x', self.x), ('y', self.y)], orient = 'columns')
