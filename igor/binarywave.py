@@ -650,7 +650,6 @@ class Waves:
         self.wave = load(filename) # load wave into dictionary
     
         self.y = self.wave['wave']['wData'] # get y data
-        print self.y.shape
         
         # create x data
         self.x = _numpy.zeros(self.y.shape)
