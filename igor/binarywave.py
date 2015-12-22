@@ -32,6 +32,7 @@ import sys as _sys
 import types as _types
 
 import numpy as _numpy
+import pandas as _pandas
 
 from . import LOG as _LOG
 from .struct import Structure as _Structure
@@ -635,9 +636,80 @@ def load(filename):
     finally:
         if not hasattr(filename, 'read'):
             f.close()
-
     return data
-
-
+    
 def save(filename):
     raise NotImplementedError
+    
+#### wave class to add some functionality ### 
+    
+class Waves:
+    """ a class for handling waves as python objects """
+    
+    def __init__(self, filename):
+        self.wave = load(filename) # load wave into dictionary
+    
+        self.y = self.wave['wave']['wData'] # get y data
+        print self.y.shape
+        
+        # create x data
+        self.x = _numpy.zeros(self.y.shape)
+        self.dimensions = self.wave['wave']['wave_header']['nDim']
+        if self.wave['version']==5:
+            sfA = self.wave['wave']['wave_header']['sfA']
+            sfB = self.wave['wave']['wave_header']['sfB']
+        elif self.wave['version']==2:
+            sfA = self.wave['wave']['wave_header']['hsA']
+            sfB = self.wave['wave']['wave_header']['hsB']
+        else:
+            raise ValueError('Something is up with your binary wave version number.')
+            
+        self.d = _numpy.count_nonzero(self.dimensions)
+        if self.d == 1:
+            self.x = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
+        elif self.d == 2:
+            for i in range(self.dimensions[1]):
+                self.x[:,i] = _numpy.arange(self.dimensions[0])
+        else:
+            raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
+    
+    def scale_y(self, scaling):
+        """ Scale y data. Uses an original copy of y data each time.
+        
+            Input -- scaling factor
+            
+            self.y = self.y*scaling """
+            
+        self.y = self.wave['wave']['wData'] # get y data
+        self.y = self.y*scaling
+    
+    def as_nparray(self):
+        """ Get x,y coordinates as numpy array. """
+        
+        if self.d == 1:
+            return _numpy.array(zip(self.x, self.y))
+        elif self.d == 2:
+            xy = _numpy.zeros((self.dimensions[0], self.dimensions[1]*2))
+            xy[:,::2] = self.x
+            xy[:,1::2] = self.y
+            return xy
+        else:
+            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
+
+    def as_dataframe(self, sharex = False):
+        """ Get x,y coordinates as individual columns in a dataframe. """
+        
+        if self.d == 1:
+            return _pandas.DataFrame.from_items([('x', self.x), ('y', self.y)], orient = 'columns')
+        elif self.d == 2:
+            if sharex:
+                data = _numpy.column_stack((self.x[:,0], self.y))
+                col_names = ['x']
+                col_names.extend(['y'+str(n) for n in range(self.dimensions[1])])
+                return _pandas.DataFrame(data, columns = col_names)
+            else:
+                data = self.as_nparray()
+                col_names = [u+str(n) for n in range(self.dimensions[1]) for u in ('x','y')]
+                return _pandas.DataFrame(data, columns = col_names)
+        else:
+            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
