@@ -684,34 +684,3 @@ class Waves:
             # should do nothing if x values are not scaled
         else:
             raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
-    
-    def as_nparray(self):
-        """ Get x,y coordinates as numpy array. """
-        
-        if self.d == 1:
-            return _numpy.column_stack((self.x, self.y))
-        elif self.d == 2:
-            xy = _numpy.zeros((self.dimensions[0], self.dimensions[1]*2))
-            xy[:,::2] = self.x
-            xy[:,1::2] = self.y
-            return xy
-        else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
-
-    def as_dataframe(self, sharex = False):
-        """ Get x,y coordinates as individual columns in a dataframe. """
-        
-        if self.d == 1:
-            return _pandas.DataFrame.from_items([('x', self.x), ('y', self.y)], orient = 'columns')
-        elif self.d == 2:
-            if sharex:
-                data = _numpy.column_stack((self.x[:,0], self.y))
-                col_names = ['x']
-                col_names.extend(['y'+str(n) for n in range(self.dimensions[1])])
-                return _pandas.DataFrame(data, columns = col_names)
-            else:
-                data = self.as_nparray()
-                col_names = [u+str(n) for n in range(self.dimensions[1]) for u in ('x','y')]
-                return _pandas.DataFrame(data, columns = col_names)
-        else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
