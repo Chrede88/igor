@@ -675,6 +675,9 @@ class Waves:
             self.x = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
             # correct such that the x values go from low to high
             # should do nothing if x values are not scaled
+            if sfA[0]<0:
+                self.x = self.x[::-1]
+                self.y = self.y[::-1]
         elif self.d == 2:
             self.x = _numpy.zeros((self.dimensions[0], self.dimensions[1], 2))
             u = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
@@ -682,5 +685,11 @@ class Waves:
             self.x[:,:,0], self.x[:,:,1] = _numpy.meshgrid(v,u)
             # correct such that lowest values are at [0,0]
             # should do nothing if x values are not scaled
+            if sfA[0]<0:
+                self.x = self.x[::-1, :, :]
+                self.y = self.y[::-1, :]
+            if sfA[1]<0:
+                self.x = self.x[:, ::-1, :]
+                self.y = self.y[:, ::-1, :]
         else:
             raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
