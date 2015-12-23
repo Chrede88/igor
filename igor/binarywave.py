@@ -646,7 +646,7 @@ def save(filename):
 class Waves:
     """ a class for handling waves as python objects """
     
-    def __init__(self, filename, use_x_scaling=True, y_multiplier = None):
+    def __init__(self, filename, use_x_scaling=True, y_multiplier = None, transpose = False):
         self.wave = load(filename) # load wave into dictionary
     
         self.y = self.wave['wave']['wData'] # get y data
@@ -678,6 +678,7 @@ class Waves:
             if sfA[0]<0:
                 self.x = self.x[::-1]
                 self.y = self.y[::-1]
+            self.extent = [self.x[0], self.x[-1]]
         elif self.d == 2:
             self.x = _numpy.zeros((self.dimensions[0], self.dimensions[1], 2))
             u = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
@@ -686,10 +687,16 @@ class Waves:
             # correct such that lowest values are at [0,0]
             # should do nothing if x values are not scaled
             if sfA[0]<0:
-                self.x = self.x[::-1, :, :]
-                self.y = self.y[::-1, :]
+                self.x = self.x[::-1,:,:]
+                self.y = self.y[::-1,:]
             if sfA[1]<0:
-                self.x = self.x[:, ::-1, :]
-                self.y = self.y[:, ::-1, :]
+                self.x = self.x[:,::-1,:]
+                self.y = self.y[:,::-1]
+            if transpose:
+                self.y = self.y.transpose()
+                self.x = self.x.transpose((1,0,2))
+                self.x = self.x[:,:,::-1]
+            self.extent = [self.x[0,0,0], self.x[0,-1,0], self.x[0,0,1], self.x[-1,0,1]]
         else:
             raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
+        
