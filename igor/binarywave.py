@@ -646,47 +646,50 @@ def save(filename):
 class Waves:
     """ a class for handling waves as python objects """
     
-    def __init__(self, filename):
+    def __init__(self, filename, use_x_scaling=True, y_multiplier = None):
         self.wave = load(filename) # load wave into dictionary
     
         self.y = self.wave['wave']['wData'] # get y data
+        if y_multiplier:
+            self.y = self.y*y_multiplier
         
         # create x data
-        self.x = _numpy.zeros(self.y.shape)
+
         self.dimensions = self.wave['wave']['wave_header']['nDim']
-        if self.wave['version']==5:
-            sfA = self.wave['wave']['wave_header']['sfA']
-            sfB = self.wave['wave']['wave_header']['sfB']
-        elif self.wave['version']==2:
-            sfA = self.wave['wave']['wave_header']['hsA']
-            sfB = self.wave['wave']['wave_header']['hsB']
+        if use_x_scaling:
+            if self.wave['version']==5:
+                sfA = self.wave['wave']['wave_header']['sfA']
+                sfB = self.wave['wave']['wave_header']['sfB']
+            elif self.wave['version']==2:
+                sfA = self.wave['wave']['wave_header']['hsA']
+                sfB = self.wave['wave']['wave_header']['hsB']
+            else:
+                raise ValueError('Something is up with your binary wave version number.')
         else:
-            raise ValueError('Something is up with your binary wave version number.')
+            sfA = [1.0, 1.0, 1.0, 1.0]
+            sfB = [0.0, 0.0, 0.0, 0.0]
             
         self.d = _numpy.count_nonzero(self.dimensions)
         if self.d == 1:
+            self.x = _numpy.zeros(self.y.shape)
             self.x = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
+            # correct such that the x values go from low to high
+            # should do nothing if x values are not scaled
         elif self.d == 2:
-            for i in range(self.dimensions[1]):
-                self.x[:,i] = _numpy.arange(self.dimensions[0])
+            self.x = _numpy.zeros((self.dimensions[0], self.dimensions[1], 2))
+            u = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
+            v = sfA[1]*_numpy.arange(self.dimensions[1]) + sfB[1]
+            self.x[:,:,0], self.x[:,:,1] = _numpy.meshgrid(v,u)
+            # correct such that lowest values are at [0,0]
+            # should do nothing if x values are not scaled
         else:
             raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
-    
-    def scale_y(self, scaling):
-        """ Scale y data. Uses an original copy of y data each time.
-        
-            Input -- scaling factor
-            
-            self.y = self.y*scaling """
-            
-        self.y = self.wave['wave']['wData'] # get y data
-        self.y = self.y*scaling
     
     def as_nparray(self):
         """ Get x,y coordinates as numpy array. """
         
         if self.d == 1:
-            return _numpy.array(zip(self.x, self.y))
+            return _numpy.column_stack((self.x, self.y))
         elif self.d == 2:
             xy = _numpy.zeros((self.dimensions[0], self.dimensions[1]*2))
             xy[:,::2] = self.x
