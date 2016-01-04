@@ -647,14 +647,15 @@ class Waves:
     """ a class for handling waves as python objects """
     
     def __init__(self, filename, use_x_scaling=True, y_multiplier = None, transpose = False):
+        # get wave object
         self.wave = load(filename) # load wave into dictionary
     
+        # get y data
         self.y = self.wave['wave']['wData'] # get y data
         if y_multiplier:
             self.y = self.y*y_multiplier
         
         # create x data
-
         self.dimensions = self.wave['wave']['wave_header']['nDim']
         if use_x_scaling:
             if self.wave['version']==5:
