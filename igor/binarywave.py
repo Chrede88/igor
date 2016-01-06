@@ -699,5 +699,16 @@ class Waves:
                 self.x = self.x[:,:,::-1]
             self.extent = [self.x[0,0,0], self.x[0,-1,0], self.x[0,0,1], self.x[-1,0,1]]
         else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
+            raise ValueError('This thing cannot handle more than 2D waves.' )
+    def as_numpyarray(self):
+        if self.d==1:
+            return _numpy.column_stack(self.x, self.y)
+        if self.d==2:
+            m,n = self.y.shape
+            out = _numpy.zeros((m+1,n+1))
+            out[1:,1:] = self.y
+            out[0,1:] = self.x[0,:,0]
+            out[1:,0] = self.x[:,0,1]
+            return out
+            
         
