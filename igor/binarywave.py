@@ -646,70 +646,69 @@ def save(filename):
 class Waves:
     """ a class for handling waves as python objects """
     
-    def __init__(self, filename):
+    def __init__(self, filename, use_x_scaling=True, y_multiplier = None, transpose = False):
+        # get wave object
         self.wave = load(filename) # load wave into dictionary
     
+        # get y data
         self.y = self.wave['wave']['wData'] # get y data
-        print self.y.shape
+        if y_multiplier:
+            self.y = self.y*y_multiplier
         
         # create x data
-        self.x = _numpy.zeros(self.y.shape)
         self.dimensions = self.wave['wave']['wave_header']['nDim']
-        if self.wave['version']==5:
-            sfA = self.wave['wave']['wave_header']['sfA']
-            sfB = self.wave['wave']['wave_header']['sfB']
-        elif self.wave['version']==2:
-            sfA = self.wave['wave']['wave_header']['hsA']
-            sfB = self.wave['wave']['wave_header']['hsB']
+        if use_x_scaling:
+            if self.wave['version']==5:
+                sfA = self.wave['wave']['wave_header']['sfA']
+                sfB = self.wave['wave']['wave_header']['sfB']
+            elif self.wave['version']==2:
+                sfA = self.wave['wave']['wave_header']['hsA']
+                sfB = self.wave['wave']['wave_header']['hsB']
+            else:
+                raise ValueError('Something is up with your binary wave version number.')
         else:
-            raise ValueError('Something is up with your binary wave version number.')
+            sfA = [1.0, 1.0, 1.0, 1.0]
+            sfB = [0.0, 0.0, 0.0, 0.0]
             
         self.d = _numpy.count_nonzero(self.dimensions)
         if self.d == 1:
+            self.x = _numpy.zeros(self.y.shape)
             self.x = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
+            # correct such that the x values go from low to high
+            # should do nothing if x values are not scaled
+            if sfA[0]<0:
+                self.x = self.x[::-1]
+                self.y = self.y[::-1]
+            self.extent = [self.x[0], self.x[-1]]
         elif self.d == 2:
-            for i in range(self.dimensions[1]):
-                self.x[:,i] = _numpy.arange(self.dimensions[0])
+            self.x = _numpy.zeros((self.dimensions[0], self.dimensions[1], 2))
+            u = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
+            v = sfA[1]*_numpy.arange(self.dimensions[1]) + sfB[1]
+            self.x[:,:,0], self.x[:,:,1] = _numpy.meshgrid(v,u)
+            # correct such that lowest values are at [0,0]
+            # should do nothing if x values are not scaled
+            if sfA[0]<0:
+                self.x = self.x[::-1,:,:]
+                self.y = self.y[::-1,:]
+            if sfA[1]<0:
+                self.x = self.x[:,::-1,:]
+                self.y = self.y[:,::-1]
+            if transpose:
+                self.y = self.y.transpose()
+                self.x = self.x.transpose((1,0,2))
+                self.x = self.x[:,:,::-1]
+            self.extent = [self.x[0,0,0], self.x[0,-1,0], self.x[0,0,1], self.x[-1,0,1]]
         else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.' )
-    
-    def scale_y(self, scaling):
-        """ Scale y data. Uses an original copy of y data each time.
-        
-            Input -- scaling factor
+            raise ValueError('This thing cannot handle more than 2D waves.' )
+    def as_numpyarray(self):
+        if self.d==1:
+            return _numpy.column_stack(self.x, self.y)
+        if self.d==2:
+            m,n = self.y.shape
+            out = _numpy.zeros((m+1,n+1))
+            out[1:,1:] = self.y
+            out[0,1:] = self.x[0,:,0]
+            out[1:,0] = self.x[:,0,1]
+            return out
             
-            self.y = self.y*scaling """
-            
-        self.y = self.wave['wave']['wData'] # get y data
-        self.y = self.y*scaling
-    
-    def as_nparray(self):
-        """ Get x,y coordinates as numpy array. """
         
-        if self.d == 1:
-            return _numpy.array(zip(self.x, self.y))
-        elif self.d == 2:
-            xy = _numpy.zeros((self.dimensions[0], self.dimensions[1]*2))
-            xy[:,::2] = self.x
-            xy[:,1::2] = self.y
-            return xy
-        else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
-
-    def as_dataframe(self, sharex = False):
-        """ Get x,y coordinates as individual columns in a dataframe. """
-        
-        if self.d == 1:
-            return _pandas.DataFrame.from_items([('x', self.x), ('y', self.y)], orient = 'columns')
-        elif self.d == 2:
-            if sharex:
-                data = _numpy.column_stack((self.x[:,0], self.y))
-                col_names = ['x']
-                col_names.extend(['y'+str(n) for n in range(self.dimensions[1])])
-                return _pandas.DataFrame(data, columns = col_names)
-            else:
-                data = self.as_nparray()
-                col_names = [u+str(n) for n in range(self.dimensions[1]) for u in ('x','y')]
-                return _pandas.DataFrame(data, columns = col_names)
-        else:
-            raise ValueError('This thing cannot handle that many dimensions. Go fix it.')
