@@ -649,23 +649,32 @@ class Waves:
     def __init__(self, filename, use_x_scaling=True, y_multiplier = None, transpose = False):
         # get wave object
         self.wave = load(filename) # load wave into dictionary
+        self.version = self.wave['version']
+        if self.version not in [2,5]:
+            raise ValueError('Only waves of version 2 and 5 are supported currently.')
     
         # get y data
         self.y = self.wave['wave']['wData'] # get y data
         if y_multiplier:
             self.y = self.y*y_multiplier
         
+        # get dimensions
+        if self.version==2:
+            if 'nDim' in self.wave['wave']['wave_header']:
+                self.dimensions = self.wave['wave']['wave_header']['nDim']
+            else:
+                self.dimensions = [self.wave['wave']['wave_header']['npnts'], 0, 0, 0]
+        if self.version==5:
+            self.dimensions = self.wave['wave']['wave_header']['nDim']
+        
         # create x data
-        self.dimensions = self.wave['wave']['wave_header']['nDim']
         if use_x_scaling:
-            if self.wave['version']==5:
+            if self.version==5:
                 sfA = self.wave['wave']['wave_header']['sfA']
                 sfB = self.wave['wave']['wave_header']['sfB']
-            elif self.wave['version']==2:
-                sfA = self.wave['wave']['wave_header']['hsA']
-                sfB = self.wave['wave']['wave_header']['hsB']
-            else:
-                raise ValueError('Something is up with your binary wave version number.')
+            elif self.version==2:
+                sfA = [self.wave['wave']['wave_header']['hsA'], 1, 1, 1] # this is pretty hacked
+                sfB = [self.wave['wave']['wave_header']['hsB'], 0, 0, 0] # watch out for other versions
         else:
             sfA = [1.0, 1.0, 1.0, 1.0]
             sfB = [0.0, 0.0, 0.0, 0.0]
@@ -702,7 +711,7 @@ class Waves:
             raise ValueError('This thing cannot handle more than 2D waves.' )
     def as_numpyarray(self):
         if self.d==1:
-            return _numpy.column_stack(self.x, self.y)
+            return _numpy.column_stack((self.x, self.y))
         if self.d==2:
             m,n = self.y.shape
             out = _numpy.zeros((m+1,n+1))
