@@ -646,17 +646,17 @@ def save(filename):
 class Waves:
     """ a class for handling waves as python objects """
     
-    def __init__(self, filename, use_x_scaling=True, y_multiplier = None, transpose = False):
+    def __init__(self, filename, use_x_scaling=True, transpose = True, 
+                 x_multiplier = None, y_multiplier = None):
+                 
+        self.transpose=transpose
+        self.use_x_scaling=use_x_scaling
+                 
         # get wave object
         self.wave = load(filename) # load wave into dictionary
         self.version = self.wave['version']
         if self.version not in [2,5]:
             raise ValueError('Only waves of version 2 and 5 are supported currently.')
-    
-        # get y data
-        self.y = self.wave['wave']['wData'] # get y data
-        if y_multiplier:
-            self.y = self.y*y_multiplier
         
         # get dimensions
         if self.version==2:
@@ -666,8 +666,21 @@ class Waves:
                 self.dimensions = [self.wave['wave']['wave_header']['npnts'], 0, 0, 0]
         if self.version==5:
             self.dimensions = self.wave['wave']['wave_header']['nDim']
+        self.d = _numpy.count_nonzero(self.dimensions)
         
-        # create x data
+        self._ydata(y_multiplier)
+        self._xdata(x_multiplier, self.use_x_scaling)
+    
+            
+    def _ydata(self, y_multiplier=None):
+        # get y data
+        self.y = self.wave['wave']['wData'] # get y data
+        if y_multiplier:
+            self.y = self.y*y_multiplier
+            
+    def _xdata(self, x_multiplier=None, use_x_scaling=True):
+    
+        # get proper scaling factors
         if use_x_scaling:
             if self.version==5:
                 sfA = self.wave['wave']['wave_header']['sfA']
@@ -678,8 +691,23 @@ class Waves:
         else:
             sfA = [1.0, 1.0, 1.0, 1.0]
             sfB = [0.0, 0.0, 0.0, 0.0]
+       
+       
+        # clean up x_multiplier variable   
+        if not hasattr(x_multiplier, "__len__"):
+            x_multiplier = [x_multiplier]
+        if not self.transpose:
+            x_multiplier = x_multiplier[::-1]
+        try:
+            if x_multiplier[0]: # always exists
+                sfA[0] = x_multiplier[0]*sfA[0]
+                sfB[0] = x_multiplier[0]*sfB[0]
+            if x_multiplier[1]: # sometimes exists
+                sfA[1] = x_multiplier[1]*sfA[1]
+                sfB[1] = x_multiplier[1]*sfB[1]
+        except IndexError: # catch index error if x_multiplier[1] does not exist
+            pass 
             
-        self.d = _numpy.count_nonzero(self.dimensions)
         if self.d == 1:
             self.x = _numpy.zeros(self.y.shape)
             self.x = sfA[0]*_numpy.arange(self.dimensions[0]) + sfB[0]
@@ -702,14 +730,21 @@ class Waves:
             if sfA[1]<0:
                 self.x = self.x[:,::-1,:]
                 self.y = self.y[:,::-1]
-            if transpose:
+            if self.transpose:
                 self.y = self.y.transpose()
                 self.x = self.x.transpose((1,0,2))
                 self.x = self.x[:,:,::-1]
             self.extent = [self.x[0,0,0], self.x[0,-1,0], self.x[0,0,1], self.x[-1,0,1]]
         else:
             raise ValueError('This thing cannot handle more than 2D waves.' )
+       
+    def rescale_axes(self, x_multiplier=None, y_multiplier=None):
+        """ rescale x and y data using new multiplier values """
+        self._ydata(y_multiplier)
+        self._xdata(x_multiplier, self.use_x_scaling)
+            
     def as_numpyarray(self):
+        """ return wave data (x and y) as numpy array """
         if self.d==1:
             return _numpy.column_stack((self.x, self.y))
         if self.d==2:
@@ -719,5 +754,4 @@ class Waves:
             out[0,1:] = self.x[0,:,0]
             out[1:,0] = self.x[:,0,1]
             return out
-            
         
